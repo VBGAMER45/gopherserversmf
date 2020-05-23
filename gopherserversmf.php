@@ -357,7 +357,9 @@ do {
 							$gopherClient[$key]->WriteText($row2['subject']);
 							$gopherClient[$key]->WriteText('By: ' . $row2['poster_name'] . ' Date: ' . date("F j, Y, g:i a",$row2['poster_time']));
 							$gopherClient[$key]->WriteText("---------------------------------------------------------");
-							$gopherClient[$key]->WriteText($row2['body']);
+							$lines = explode("<br />",$row2['body']);
+							foreach($lines as $line)
+								$gopherClient[$key]->WriteText($line);
 
 
 						}
