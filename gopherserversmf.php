@@ -154,7 +154,7 @@ do {
             {
             	$gopherClient[$key] = new  Gopher_Server();
             	$gopherClient[$key]->setHostname(GOPHER_BINDADDRESS);
-				$gopherClient[$key]->setPort(GOPHER_PORT);
+		$gopherClient[$key]->setPort(GOPHER_PORT);
             }
 
             $tokens = explode("\t",$buf);
@@ -179,7 +179,8 @@ do {
 
 				$gopherClient[$key]->WriteDirectory("Return " . SITE_TITLE . " - Home","/");
 				$gopherClient[$key]->WriteText("---------------------------------------------------------");
-				$gopherClient[$key]->WriteText("Url: " . SITE_URL);
+				
+				$gopherClient[$key]->WriteHTMLLink(SITE_URL,SITE_URL);
 				$gopherClient[$key]->WriteText("---------------------------------------------------------");
 
 
@@ -357,9 +358,59 @@ do {
 							$gopherClient[$key]->WriteText($row2['subject']);
 							$gopherClient[$key]->WriteText('By: ' . $row2['poster_name'] . ' Date: ' . date("F j, Y, g:i a",$row2['poster_time']));
 							$gopherClient[$key]->WriteText("---------------------------------------------------------");
+							$row2['body'] = replaceBBcodes($row2['body']);
 							$lines = explode("<br />",$row2['body']);
 							foreach($lines as $line)
-								$gopherClient[$key]->WriteText($line);
+							{
+
+								$line = wordwrap($line,64,"<br />",false);
+								// Start of link code
+
+								$reg_exUrl = "/(http|https|ftp|ftps)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?/";
+								preg_match_all($reg_exUrl,  $line, $matches);
+								$usedPatterns = array();
+								foreach ($matches[0] as $pattern)
+								{
+									if (!array_key_exists($pattern, $usedPatterns))
+									{
+										$usedPatterns[$pattern] = true;
+										 $line = str_replace($pattern, "<br />$pattern<br />",  $line);
+
+									//	$tmp = explode('\n',$line);
+										//foreach($tmp as $line2);
+
+
+									}
+								}
+
+								$splitLine = explode("<br />",$line);
+								foreach($splitLine as $tmpLine)
+								{
+									if (!empty($tmpLine))
+									{
+										$tmpLine = trim($tmpLine);
+
+										if (substr_count($tmpLine,"http://") > 0 || substr_count($tmpLine,"https://"))
+										{
+
+											$gopherClient[$key]->WriteHTMLLink($tmpLine,$tmpLine);
+										}
+										else
+											$gopherClient[$key]->WriteText($tmpLine);
+									}
+								}
+
+
+
+
+
+
+
+
+
+
+
+							}
 
 
 						}
@@ -609,7 +660,13 @@ http://www.rooftopsolutions.nl/blog/100
 		}		
 		$this->dataItems[] =   array(self::G_SEARCH, $title, $location);
 	}
-	
+
+
+    public function WriteHTMLLink($title,$location)
+	{
+		$location = "URL:" . $location;
+		$this->dataItems[] =   array(self::G_HTML, $title, $location);
+	}
     /**
      * encode the response in a gopher format
      *
@@ -617,7 +674,7 @@ http://www.rooftopsolutions.nl/blog/100
      * @return string
      */
     public function encodeResponse($data)
-	{
+    {
 
         $raw = '';
         foreach($data as $item)
@@ -631,7 +688,7 @@ http://www.rooftopsolutions.nl/blog/100
             $port     = isset($item[4])?$item[4]:$this->port;
 
             switch($type)
-			{
+	    {
                 // If the type is text, we will leave the other items empty
                 case self::G_TEXT :
                     $location = 'fake';
@@ -652,3 +709,49 @@ http://www.rooftopsolutions.nl/blog/100
 
   }
 
+
+function un_htmlspecialchars($string)
+{
+	// SMF 2.0.17 BSD
+	static $translation;
+
+	if (!isset($translation))
+		$translation = array_flip(get_html_translation_table(HTML_SPECIALCHARS, ENT_QUOTES)) + array('&#039;' => '\'', '&nbsp;' => ' ');
+
+	return strtr($string, $translation);
+}
+
+
+ function replaceBBcodes($text)
+    {
+		$text = un_htmlspecialchars($text);
+
+		// BBcode array
+		$find = array(
+			'~\[b\](.*?)\[/b\]~s',
+			'~\[i\](.*?)\[/i\]~s',
+			'~\[u\](.*?)\[/u\]~s',
+			'~\[size=([^"><]*?)\](.*?)\[/size\]~s',
+			'~\[color=([^"><]*?)\](.*?)\[/color\]~s',
+			'~\[url=((?:ftp|https?)://[^"><]*?)\](.*?)\[/url\]~s',
+			'~\[url\]((?:ftp|https?)://[^"><]*?)\[/url\]~s',
+			'~\[img width=(0-9*) height=(0-9*)\](https?://[^"><]*?\.(?:jpg|jpeg|gif|png|bmp))\[/img\]~s',
+			'~\[img\](https?://[^"><]*?\.(?:jpg|jpeg|gif|png|bmp))\[/img\]~s',
+
+
+		);
+
+		$replace = array(
+			'$1', //b
+			'$1', //i
+			'$1', //u
+			'$2', // size
+			'$2', // olor
+			'$2<br />$1',  //url=
+			'$1', // url
+			'$3', //img
+			'$1',
+		);
+
+		return preg_replace($find, $replace, $text);
+	}
