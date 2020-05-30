@@ -125,17 +125,17 @@ do {
 */
 
         if (in_array($client, $read)) {
-            if (false === ($buf = socket_read($client, 2048, PHP_NORMAL_READ))) {
+            if (false === ($buf = socket_read($client, 2048, PHP_BINARY_READ))) {
                echo "socket_read() failed: " . socket_strerror(socket_last_error($client)) . "\n";
                 //break 2;
 				unset($gopherClient[$key]);
 				unset($clients[$key]);
                 socket_close($client);
-                break;
+              continue;
 
             }
             if (!$buf = trim($buf)) {
-               continue;
+           //   continue;
             }
 
             // Not used by gopher just for use in console apps.
@@ -147,6 +147,7 @@ do {
 
             // Output for console
             echo "Client: $key Gopher: $buf\n";
+            $buf = trim($buf);
 
             $clientLastTime[$key] = time();
 
@@ -160,6 +161,9 @@ do {
             $tokens = explode("\t",$buf);
 
             $tokenParts =explode('/',$tokens[0]);
+
+		if (!isset($tokenParts[1]))
+			$tokenParts[1] = '';
 
             if (DEBUG_MODE)
 			{
@@ -180,7 +184,7 @@ do {
             $tokens[0] = '/' . $tokenParts[1];
 
             // Display the Main Listing
-            if ($tokens[0] == '/' || $tokens[0] == '/forums')
+            if ($tokens[0] == '/' || $tokens[0] == '/forums' || empty($tokens[0]))
             {
 
 				// Show forum boards!!
