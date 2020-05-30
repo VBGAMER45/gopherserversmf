@@ -52,6 +52,9 @@ if (($sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)) === false)
     echo "socket_create() failed " . socket_strerror(socket_last_error()) . "\n";
 }
 
+// set the option to reuse the port
+socket_set_option($sock, SOL_SOCKET, SO_REUSEADDR, 1);
+
 if (socket_bind($sock,GOPHER_BINDADDRESS, GOPHER_PORT) === false)
 {
     echo "socket_bind() failed: " . socket_strerror(socket_last_error($sock)) . "\n";
@@ -113,6 +116,7 @@ do {
 
     // Handle Input
     foreach ($clients as $key => $client) { // for each client
+		$closeSocket = 0;
 		/*
 		if (!empty($clientLastTime[$key]) && ($clientLastTime[$key]+ 60) > time())
 		{
@@ -178,6 +182,14 @@ do {
 				$fileData = file_get_contents(dirname(__FILE__).'/caps.txt');
 				$fileData .= chr(32) . "\r\n". "." . "\r\n" . chr(0);
 				socket_write($client, $fileData, strlen($fileData));
+				$closeSocket = 1;
+
+					echo 'Closing Socket: ' . $key;
+				socket_shutdown($client,1);
+				socket_close($client);
+
+				unset($gopherClient[$key]);
+				unset($clients[$key]);
 				break;
 			}
 
@@ -453,6 +465,7 @@ do {
 
 				$response = $gopherClient[$key]->ReturnResponse();
 				socket_write($client, $response, strlen($response));
+				$closeSocket = 1;
 
 			}
 			else
@@ -464,9 +477,24 @@ do {
 
 				$response = $gopherClient[$key]->ReturnResponse();
 				socket_write($client, $response, strlen($response));
+				$closeSocket = 1;
 			}
 
 
+
+
+			if ($closeSocket == 1)
+			{
+			
+
+				echo 'Closing Socket: ' . $key;
+				socket_shutdown($client,1);
+
+				socket_close($client);
+
+				unset($gopherClient[$key]);
+				unset($clients[$key]);
+			}
 
 
         }
