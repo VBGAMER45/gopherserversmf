@@ -167,6 +167,16 @@ do {
 				echo 'After Split: ' . '/' . $tokenParts[1] . "\n";
 			}
 
+			if ($tokenParts[1] == 'caps.txt')
+			{
+				echo 'FOUND CAPS';
+				// Show text file
+				$fileData = file_get_contents(dirname(__FILE__).'/caps.txt');
+				$fileData .= chr(32) . "\r\n". "." . "\r\n" . chr(0);
+				socket_write($client, $fileData, strlen($fileData));
+				break;
+			}
+
             $tokens[0] = '/' . $tokenParts[1];
 
             // Display the Main Listing
